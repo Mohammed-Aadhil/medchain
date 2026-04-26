@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - MediAI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0066CC;
+            --primary-dark: #0052A3;
+            --secondary: #00C896;
+            --accent: #8B5CF6;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --dark: #1A1A2E;
+            --light: #F8F9FA;
+            --gray: #6C757D;
+            --border-radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 2px, transparent 2px);
+            background-size: 60px 60px;
+            animation: moveGrid 30s linear infinite;
+        }
+
+        @keyframes moveGrid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(60px, 60px); }
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .logo i {
+            margin-right: 0.5rem;
+            font-size: 1.8rem;
+        }
+
+        .welcome-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-text h1 {
+            font-size: 1.3rem;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .welcome-text p {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 102, 204, 0.1);
+            border-radius: 50px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.95rem;
+        }
+
+        .user-role {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, var(--error), #DC2626);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Flash Messages */
+        .flash-messages {
+            margin-bottom: 2rem;
+        }
+
+        .flash-message {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideInRight 0.4s ease-out;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .flash-message.success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .flash-message.error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+            border-left: 4px solid var(--error);
+        }
+
+        .flash-message.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .flash-message.info {
+            background: rgba(0, 102, 204, 0.15);
+            color: var(--primary);
+            border-left: 4px solid var(--primary);
+        }
+
+        /* Quick Stats */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--transition);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .stat-icon.predictions {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+        }
+
+        .stat-icon.queries {
+            background: linear-gradient(135deg, var(--secondary), var(--success));
+        }
+
+        .stat-icon.solutions {
+            background: linear-gradient(135deg, var(--warning), #F97316);
+        }
+
+        .stat-icon.chatbot {
+            background: linear-gradient(135deg, var(--accent), #A855F7);
+        }
+
+        .stat-content h3 {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-content p {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        /* Services Grid */
+        .services-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .section-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.5s ease;
+        }
+
+        .service-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .service-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .service-card:hover .service-icon {
+            transform: rotate(10deg) scale(1.1);
+        }
+
+        .service-icon i {
+            font-size: 2rem;
+            color: white;
+        }
+
+        .service-title {
+            font-size: 1.4rem;
+            color: var(--dark);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .service-description {
+            color: var(--gray);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .service-features {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .service-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+            font-size: 0.9rem;
+        }
+
+        .service-features i {
+            color: var(--success);
+            font-size: 0.8rem;
+        }
+
+        .service-btn {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .service-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 102, 204, 0.3);
+        }
+
+        /* Recent Activity */
+        .activity-section {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .activity-title {
+            font-size: 1.5rem;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .view-all-btn {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .view-all-btn:hover {
+            text-decoration: underline;
+        }
+
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid #E5E7EB;
+            transition: var(--transition);
+        }
+
+        .activity-item:hover {
+            background: rgba(0, 102, 204, 0.05);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .activity-icon.prediction {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+        }
+
+        .activity-icon.query {
+            background: linear-gradient(135deg, var(--secondary), var(--success));
+        }
+
+        .activity-icon.solution {
+            background: linear-gradient(135deg, var(--warning), #F97316);
+        }
+
+        .activity-icon.chat {
+            background: linear-gradient(135deg, var(--accent), #A855F7);
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-text {
+            color: var(--dark);
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            color: var(--gray);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .user-info {
+                display: none;
+            }
+
+            .quick-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .activity-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <header>
+        <div class="header-container">
+            <div class="header-left">
+                <a href="#" class="logo">
+                    <i class="fas fa-heartbeat"></i>
+                    MediAI
+                </a>
+                <div class="welcome-text">
+                    <h1>Welcome back, {{ user_name }}!</h1>
+                    <p>Your health journey continues</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div class="user-avatar">{{ user_name[0]|upper }}</div>
+                    <div class="user-details">
+                        <span class="user-name">{{ user_name }}</span>
+                        <span class="user-role">Patient</span>
+                    </div>
+                </div>
+                <a href="/logout" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            {% if category == 'success' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif category == 'error' %}
+                                <i class="fas fa-exclamation-circle"></i>
+                            {% elif category == 'warning' %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle"></i>
+                            {% endif %}
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Quick Stats -->
+        
+        <!-- Services Section -->
+        <section class="services-section">
+            <div class="section-header">
+                <h2 class="section-title">Healthcare Services</h2>
+                <p class="section-subtitle">Access all your medical tools in one place</p>
+            </div>
+
+            <div class="services-grid">
+                <!-- Disease Prediction Card -->
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3 class="service-title">Disease Prediction</h3>
+                    <p class="service-description">
+                        Get AI-powered disease predictions using advanced multimodal analysis of your symptoms, medical images, and voice patterns.
+                    </p>
+                    <ul class="service-features">
+                        <li><i class="fas fa-check"></i> Symptom Analysis</li>
+                        <li><i class="fas fa-check"></i> Image Recognition</li>
+                        <li><i class="fas fa-check"></i> Voice Assessment</li>
+                    </ul>
+                    <a href="/index" class="service-btn">
+                        <i class="fas fa-arrow-right"></i>
+                        Start Prediction
+                    </a>
+                </div>
+
+                <!-- Ask Doctor Card -->
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <h3 class="service-title">Ask Doctor</h3>
+                    <p class="service-description">
+                        Connect with certified healthcare professionals for personalized medical advice and answers to your health concerns.
+                    </p>
+                    <ul class="service-features">
+                        <li><i class="fas fa-check"></i> Expert Consultation</li>
+                        <li><i class="fas fa-check"></i> Quick Response</li>
+                        <li><i class="fas fa-check"></i> Secure Communication</li>
+                    </ul>
+                    <a href="/user/query" class="service-btn">
+                        <i class="fas fa-comments"></i>
+                        Ask Now
+                    </a>
+                </div>
+
+                <!-- View Solutions Card -->
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-file-medical"></i>
+                    </div>
+                    <h3 class="service-title">Doctor Solutions</h3>
+                    <p class="service-description">
+                        Access your medical reports, doctor responses, and personalized health recommendations in one organized dashboard.
+                    </p>
+                    <ul class="service-features">
+                        <li><i class="fas fa-check"></i> Medical Reports</li>
+                        <li><i class="fas fa-check"></i> Doctor Answers</li>
+                        <li><i class="fas fa-check"></i> Health Tips</li>
+                    </ul>
+                    <a href="/user/solutions" class="service-btn">
+                        <i class="fas fa-eye"></i>
+                        View Solutions
+                    </a>
+                </div>
+
+                <!-- AI Chatbot Card -->
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3 class="service-title">AI Chatbot</h3>
+                    <p class="service-description">
+                        Get instant health guidance and answers to your medical questions with our intelligent AI assistant available 24/7.
+                    </p>
+                    <ul class="service-features">
+                        <li><i class="fas fa-check"></i> 24/7 Availability</li>
+                        <li><i class="fas fa-check"></i> Instant Response</li>
+                        <li><i class="fas fa-check"></i> Health Information</li>
+                    </ul>
+                    <a href="/user/chatbot" class="service-btn">
+                        <i class="fas fa-comment-dots"></i>
+                        Start Chat
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="activity-section">
+            <div class="activity-header">
+                <h2 class="activity-title">Recent Activity</h2>
+                <a href="#" class="view-all-btn">View All</a>
+            </div>
+            <ul class="activity-list">
+                <li class="activity-item">
+                    <div class="activity-icon prediction">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Completed disease prediction analysis</div>
+                        <div class="activity-time">2 hours ago</div>
+                    </div>
+                </li>
+                <li class="activity-item">
+                    <div class="activity-icon query">
+                        <i class="fas fa-comments-medical"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Submitted query to Dr. Smith</div>
+                        <div class="activity-time">Yesterday</div>
+                    </div>
+                </li>
+                <li class="activity-item">
+                    <div class="activity-icon solution">
+                        <i class="fas fa-file-medical"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Viewed medical report #1234</div>
+                        <div class="activity-time">2 days ago</div>
+                    </div>
+                </li>
+                <li class="activity-item">
+                    <div class="activity-icon chat">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Chatted with AI assistant</div>
+                        <div class="activity-time">3 days ago</div>
+                    </div>
+                </li>
+            </ul>
+        </section>
+    </div>
+
+    <script>
+        // Auto-hide flash messages
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach((message, index) => {
+                setTimeout(() => {
+                    message.style.opacity = '0';
+                    message.style.transform = 'translateX(20px)';
+                    setTimeout(() => {
+                        message.remove();
+                    }, 300);
+                }, 5000 + (index * 1000));
+            });
+        });
+
+        // Add hover effect to service cards
+        const serviceCards = document.querySelectorAll('.service-card');
+        serviceCards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
+
+        // Simulate real-time updates for stats
+        function updateStats() {
+            const statNumbers = document.querySelectorAll('.stat-content h3');
+            statNumbers.forEach(stat => {
+                const currentValue = parseInt(stat.textContent);
+                const change = Math.random() > 0.5 ? 1 : 0;
+                if (change && Math.random() > 0.7) {
+                    stat.textContent = currentValue + change;
+                    stat.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        stat.style.transform = 'scale(1)';
+                    }, 300);
+                }
+            });
+        }
+
+        // Update stats every 30 seconds (simulated)
+        setInterval(updateStats, 30000);
+
+        // Add parallax effect to background
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const bgAnimation = document.querySelector('.bg-animation');
+            bgAnimation.style.transform = `translateY(${scrolled * 0.5}px)`;
+        });
+    </script>
+</body>
+</html>

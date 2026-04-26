@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard - MediAI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00A572;
+            --primary-dark: #00865C;
+            --secondary: #0066CC;
+            --accent: #10B981;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --info: #3B82F6;
+            --dark: #1A1A2E;
+            --light: #F8F9FA;
+            --gray: #6C757D;
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo i {
+            margin-right: 0.5rem;
+            font-size: 1.8rem;
+        }
+
+        .dashboard-title {
+            font-size: 1.3rem;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, var(--error), #DC2626);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .stat-icon.total {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+        }
+
+        .stat-icon.pending {
+            background: linear-gradient(135deg, var(--warning), #D97706);
+        }
+
+        .stat-icon.answered {
+            background: linear-gradient(135deg, var(--success), #059669);
+        }
+
+        .stat-content h3 {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-content p {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        /* Flash Messages */
+        .flash-messages {
+            margin-bottom: 2rem;
+        }
+
+        .flash-message {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .flash-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .flash-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border-left: 4px solid var(--error);
+        }
+
+        .flash-message.warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .flash-message.info {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info);
+            border-left: 4px solid var(--info);
+        }
+
+        /* Filters Section */
+        .filters-section {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid #E5E7EB;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+        }
+
+        /* Queries Section */
+        .queries-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .sort-dropdown {
+            padding: 0.5rem 1rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+        }
+
+        /* Query Cards */
+        .queries-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .query-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .query-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .query-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .query-info {
+            flex: 1;
+        }
+
+        .patient-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .patient-email {
+            color: var(--gray);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .status-badge.answered {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .query-body {
+            padding: 1.5rem;
+        }
+
+        .question-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .question-label {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .question-text {
+            color: var(--dark);
+            line-height: 1.5;
+            font-size: 1rem;
+        }
+
+        .answer-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        .answer-label {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .answer-text {
+            color: var(--dark);
+            line-height: 1.5;
+            background: rgba(16, 185, 129, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--success);
+        }
+
+        .answer-form {
+            margin-top: 1rem;
+        }
+
+        .answer-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .answer-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 165, 114, 0.1);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            display: flex;
+            align-items:;
+            gap: 0.5rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 165, 114, 0.3);
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: var(--gray);
+            border: 2px solid #E5E7EB;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .btn-cancel:hover {
+            border-color: var(--gray);
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--gray);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: var(--gray);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .stats-section {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-section {
+                flex-direction: column;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .section-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="header-left">
+                <a href="#" class="logo">
+                    <i class="fas fa-heartbeat"></i>
+                    MediAI
+                </a>
+                <h1 class="dashboard-title">Doctor Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <a href="/logout" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            {% if category == 'success' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif category == 'error' %}
+                                <i class="fas fa-exclamation-circle"></i>
+                            {% elif category == 'warning' %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle"></i>
+                            {% endif %}
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-icon total">
+                    <i class="fas fa-comments-medical"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ queries|length }}</h3>
+                    <p>Total Queries</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon pending">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ queries|selectattr('status', 'equalto', 'pending')|list|length }}</h3>
+                    <p>Pending Responses</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon answered">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ queries|selectattr('status', 'equalto', 'answered')|list|length }}</h3>
+                    <p>Answered</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <button class="filter-btn active" onclick="filterQueries('all')">All Queries</button>
+            <button class="filter-btn" onclick="filterQueries('pending')">Pending</button>
+            <button class="filter-btn" onclick="filterQueries('answered')">Answered</button>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search by name or email..." onkeyup="searchQueries(this.value)">
+            </div>
+        </div>
+
+        <!-- Queries Section -->
+        {% if queries %}
+            <div class="queries-section">
+                <div class="section-header">
+                    <h2 class="section-title">Patient Queries</h2>
+                    <select class="sort-dropdown" onchange="sortQueries(this.value)">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="pending">Pending First</option>
+                    </select>
+                </div>
+
+                <div class="queries-grid" id="queriesContainer">
+                    {% for q in queries %}
+                        <div class="query-card" data-status="{{ q.status }}" data-name="{{ q.user_name }}" data-email="{{ q.user_email }}">
+                            <div class="query-header">
+                                <div class="query-info">
+                                    <div class="patient-name">{{ q.user_name }}</div>
+                                    <div class="patient-email">
+                                        <i class="fas fa-envelope"></i>
+                                        {{ q.user_email }}
+                                    </div>
+                                </div>
+                                <span class="status-badge {{ q.status }}">{{ q.status }}</span>
+                            </div>
+
+                            <div class="query-body">
+                                <div class="question-section">
+                                    <div class="question-label">Patient Question</div>
+                                    <div class="question-text">{{ q.question }}</div>
+                                </div>
+
+                                {% if q.status == "answered" %}
+                                    <div class="answer-section">
+                                        <div class="answer-label">Your Answer</div>
+                                        <div class="answer-text">{{ q.answer }}</div>
+                                    </div>
+                                {% else %}
+                                    <div class="answer-section">
+                                        <div class="answer-label">Provide Your Answer</div>
+                                        <form method="POST" action="/doctor/reply/{{ q.id }}" class="answer-form">
+                                            <textarea name="answer" class="answer-textarea" placeholder="Type your medical advice here..." required></textarea>
+                                            <div class="form-actions">
+                                                <button type="submit" class="btn-submit">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                    Submit Answer
+                                                </button>
+                                                <button type="button" class="btn-cancel" onclick="clearForm(this.form)">Clear</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h3>No Queries Available</h3>
+                <p>There are no patient queries at the moment. Check back later for new consultations.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Filter queries
+        function filterQueries(status) {
+            const cards = document.querySelectorAll('.query-card');
+            const buttons = document.querySelectorAll('.filter-btn');
+            
+            // Update active button
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Filter cards
+            cards.forEach(card => {
+                if (status === 'all' || card.dataset.status === status) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Search queries
+        function searchQueries(searchTerm) {
+            const cards = document.querySelectorAll('.query-card');
+            const term = searchTerm.toLowerCase();
+            
+            cards.forEach(card => {
+                const name = card.dataset.name.toLowerCase();
+                const email = card.dataset.email.toLowerCase();
+                
+                if (name.includes(term) || email.includes(term)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Sort queries
+        function sortQueries(sortBy) {
+            const container = document.getElementById('queriesContainer');
+            const cards = Array.from(container.querySelectorAll('.query-card'));
+            
+            cards.sort((a, b) => {
+                if (sortBy === 'pending') {
+                    const aStatus = a.dataset.status;
+                    const bStatus = b.dataset.status;
+                    if (aStatus === 'pending' && bStatus !== 'pending') return -1;
+                    if (aStatus !== 'pending' && bStatus === 'pending') return 1;
+                    return 0;
+                }
+                // Add other sorting logic as needed
+                return 0;
+            });
+            
+            cards.forEach(card => container.appendChild(card));
+        }
+
+        // Clear form
+        function clearForm(form) {
+            form.querySelector('textarea').value = '';
+        }
+
+        // Auto-hide flash messages
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach((message, index) => {
+                setTimeout(() => {
+                    message.style.opacity = '0';
+                    message.style.transform = 'translateX(20px)';
+                    setTimeout(() => {
+                        message.remove();
+                    }, 300);
+                }, 5000 + (index * 1000));
+            });
+        });
+
+        // Auto-save draft answers
+        document.querySelectorAll('.answer-textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                localStorage.setItem(`draft_${this.form.action}`, this.value);
+            });
+        });
+
+        // Load drafts
+        window.addEventListener('load', function() {
+            document.querySelectorAll('.answer-form').forEach(form => {
+                const draft = localStorage.getItem(`draft_${form.action}`);
+                if (draft) {
+                    form.querySelector('textarea').value = draft;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
