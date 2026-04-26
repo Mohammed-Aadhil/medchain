@@ -2,12 +2,11 @@ import os
 import time
 import asyncio
 import sqlite3
-from asyncio import WindowsSelectorEventLoopPolicy
 from functools import wraps
 from datetime import datetime
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
 from flask import (
     Flask,
@@ -29,16 +28,14 @@ from transformers import BartModel, BartTokenizer
 import torchvision.models as models
 import torchaudio
 from PIL import Image
-import scipy.io.wavfile as wavfile
 
-# ✅ GEMINI IMPORT
 import google.generativeai as genai
 
 # ------------------------------
 # Configuration and Flask Setup
 # ------------------------------
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # 🔐 change in production
+app.secret_key = os.getenv("SECRET_KEY", "your_secret_key_change_in_production")
 
 BASE_DIR = os.getcwd()
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
@@ -47,12 +44,13 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 DB_PATH = os.path.join(BASE_DIR, "app.db")
 
-asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+# ✅ FIX 1: Removed Windows-only asyncio policy
+# (WindowsSelectorEventLoopPolicy is not available on Linux/Render)
 
 # ------------------------------
-# ✅ GEMINI API CONFIGURATION
+# GEMINI API CONFIGURATION
 # ------------------------------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # ✅ set in .env, do NOT hardcode
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     print("⚠️ Warning: GEMINI_API_KEY not set. Gemini features may fail.")
 else:
@@ -61,7 +59,7 @@ else:
 gemini_model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
 # ------------------------------
-# 🔹 SQLite Helper
+# SQLite Helper
 # ------------------------------
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -73,7 +71,6 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Users table (patients)
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -85,7 +82,6 @@ def init_db():
         """
     )
 
-    # Queries table (user → doctor)
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS queries (
@@ -105,15 +101,13 @@ def init_db():
     conn.close()
 
 
-# Initialize DB at startup
 init_db()
 
-# Default doctor credentials
 DOCTOR_EMAIL = "doctor@gmail.com"
 DOCTOR_PASSWORD = "doctor123"
 
 # ------------------------------
-# 🔹 Login Required Decorators
+# Login Required Decorators
 # ------------------------------
 def user_login_required(f):
     @wraps(f)
@@ -122,7 +116,6 @@ def user_login_required(f):
             flash("Please login as user first.", "warning")
             return redirect(url_for("user_login"))
         return f(*args, **kwargs)
-
     return decorated
 
 
@@ -133,12 +126,11 @@ def doctor_login_required(f):
             flash("Please login as doctor first.", "warning")
             return redirect(url_for("doctor_login"))
         return f(*args, **kwargs)
-
     return decorated
 
 
 # ------------------------------
-# 1. Define Audio Model
+# Audio Model
 # ------------------------------
 class DeepSpeech2AudioModel(nn.Module):
     def __init__(
@@ -191,7 +183,7 @@ class DeepSpeech2AudioModel(nn.Module):
 
 
 # ------------------------------
-# 2. Multimodal Classifier
+# Multimodal Classifier
 # ------------------------------
 class MultiModalClassifier(nn.Module):
     def __init__(
@@ -241,7 +233,7 @@ class MultiModalClassifier(nn.Module):
 
 
 # ------------------------------
-# 3. Inference
+# Inference
 # ------------------------------
 def inference_all(model, tokenizer, text, image_path, audio_path, transform, device):
     encoding = tokenizer(
@@ -253,18 +245,16 @@ def inference_all(model, tokenizer, text, image_path, audio_path, transform, dev
 
     try:
         waveform, sr = torchaudio.load(audio_path)
-    except ImportError:
-        # Fallback if torchcodec is not installed
+    except Exception:
         try:
             import scipy.io.wavfile as wavfile
             sr, waveform_np = wavfile.read(audio_path)
             waveform = torch.from_numpy(waveform_np).float().unsqueeze(0)
         except Exception as e:
-            print(f"Error loading audio with scipy: {e}")
-            # Create a dummy waveform if all else fails
+            print(f"Error loading audio: {e}")
             waveform = torch.randn(1, 16000)
             sr = 16000
-    
+
     if sr != 16000:
         waveform = torchaudio.transforms.Resample(sr, 16000)(waveform)
     waveform = waveform.mean(dim=0).unsqueeze(0).to(device)
@@ -276,14 +266,42 @@ def inference_all(model, tokenizer, text, image_path, audio_path, transform, dev
 
 
 # ------------------------------
-# 4. Load Models
+# ✅ FIX 2: Download model from Google Drive if not present
+# ------------------------------
+def download_model_if_needed():
+    MODEL_PATH = "multimodal_model.pth"
+    GDRIVE_FILE_ID = os.getenv("MODEL_GDRIVE_ID", "")  # Set this in Render env vars
+
+    if os.path.exists(MODEL_PATH):
+        print("✅ Model file found locally.")
+        return MODEL_PATH
+
+    if not GDRIVE_FILE_ID:
+        print("⚠️ MODEL_GDRIVE_ID not set. Cannot download model.")
+        return None
+
+    try:
+        import gdown
+        url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
+        print(f"⬇️ Downloading model from Google Drive...")
+        gdown.download(url, MODEL_PATH, quiet=False)
+        print("✅ Model downloaded successfully.")
+        return MODEL_PATH
+    except Exception as e:
+        print(f"❌ Failed to download model: {e}")
+        return None
+
+
+# ------------------------------
+# Load Models
 # ------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
 tokenizer = BartTokenizer.from_pretrained("facebook/bart-base")
 text_encoder = BartModel.from_pretrained("facebook/bart-base").to(device)
 
-image_encoder = models.resnet18(pretrained=True)
+image_encoder = models.resnet18(pretrained=False)  # ✅ FIX 3: pretrained=False for faster deploy
 image_feat_dim = image_encoder.fc.in_features
 image_encoder.fc = nn.Identity()
 image_encoder.to(device)
@@ -313,11 +331,18 @@ model = MultiModalClassifier(
     len(label_list),
 ).to(device)
 
-model.load_state_dict(torch.load("multimodal_model.pth", map_location=device))
+# ✅ FIX 4: Download model if not present, then load
+model_path = download_model_if_needed()
+if model_path and os.path.exists(model_path):
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    print("✅ Model weights loaded.")
+else:
+    print("⚠️ Model weights not loaded. Predictions will be random.")
+
 model.eval()
 
 # ------------------------------
-# 5. Transforms
+# Transforms
 # ------------------------------
 image_transform = transforms.Compose(
     [
@@ -327,7 +352,7 @@ image_transform = transforms.Compose(
 )
 
 # ------------------------------
-# ✅ GEMINI REPORT GENERATION
+# GEMINI REPORT GENERATION
 # ------------------------------
 def generate_suggestion_report(disease):
     prompt = f"""
@@ -344,7 +369,6 @@ Give output in:
 
 Also remind user to consult a real doctor.
 """
-
     try:
         if not GEMINI_API_KEY:
             return f"Predicted disease: {disease}. Please consult a doctor. (Gemini key not configured)"
@@ -356,7 +380,7 @@ Also remind user to consult a real doctor.
 
 
 # ------------------------------
-# ✅ GEMINI CHATBOT HELPER
+# GEMINI CHATBOT HELPER
 # ------------------------------
 def generate_chatbot_reply(message):
     prompt = f"""
@@ -369,7 +393,6 @@ Rules:
 - Always tell them to consult a doctor for confirmation.
 - Reply in short paragraphs.
 """
-
     try:
         if not GEMINI_API_KEY:
             return "AI chatbot is not configured (missing GEMINI_API_KEY). Please contact admin."
@@ -381,11 +404,10 @@ Rules:
 
 
 # ------------------------------
-# 6. Auth & Landing Routes
+# Auth & Landing Routes
 # ------------------------------
 @app.route("/")
 def landing():
-    # Simple landing page with options: User / Doctor
     return render_template("landing.html")
 
 
@@ -394,7 +416,6 @@ def forgot_password_redirect():
     return redirect(url_for("forgot_password"))
 
 
-# ---------- User Register ----------
 @app.route("/user/register", methods=["GET", "POST"])
 def user_register():
     if request.method == "POST":
@@ -411,7 +432,7 @@ def user_register():
         try:
             cur.execute(
                 "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-                (name, email, password),  # ⚠️ plain text for demo only
+                (name, email, password),
             )
             conn.commit()
             flash("Registration successful. Please login.", "success")
@@ -425,7 +446,6 @@ def user_register():
     return render_template("auth/user_register.html")
 
 
-# ---------- User Login ----------
 @app.route("/user/login", methods=["GET", "POST"])
 def user_login():
     if request.method == "POST":
@@ -453,7 +473,7 @@ def user_login():
 
     return render_template("auth/user_login.html")
 
-# ---------- Forget Password ----------
+
 @app.route("/user/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
@@ -466,7 +486,6 @@ def forgot_password():
 
         conn = get_db_connection()
         cur = conn.cursor()
-
         cur.execute("SELECT * FROM users WHERE email = ?", (email,))
         user = cur.fetchone()
 
@@ -475,7 +494,6 @@ def forgot_password():
             flash("No account found with this email.", "danger")
             return redirect(url_for("forgot_password"))
 
-        # ✅ Update new password directly
         cur.execute(
             "UPDATE users SET password = ? WHERE email = ?",
             (new_password, email)
@@ -488,7 +506,7 @@ def forgot_password():
 
     return render_template("auth/forgot_password.html")
 
-# ---------- Doctor Login ----------
+
 @app.route("/doctor/login", methods=["GET", "POST"])
 def doctor_login():
     if request.method == "POST":
@@ -508,7 +526,6 @@ def doctor_login():
     return render_template("auth/doctor_login.html")
 
 
-# ---------- Logout ----------
 @app.route("/logout")
 def logout():
     session.clear()
@@ -517,7 +534,7 @@ def logout():
 
 
 # ------------------------------
-# 7. User Dashboard & Features
+# User Dashboard & Features
 # ------------------------------
 @app.route("/user/dashboard")
 @user_login_required
@@ -525,11 +542,9 @@ def user_dashboard():
     return render_template("user/user_dashboard.html", user_name=session.get("user_name"))
 
 
-# ---------- Prediction Page (uses your existing index.html) ----------
 @app.route("/index")
 @user_login_required
 def index():
-    # index.html = multimodal input page (symptoms, image, audio)
     return render_template("index.html")
 
 
@@ -545,7 +560,6 @@ def download_report():
     )
 
 
-# ---------- Result Route (Prediction + Report) ----------
 @app.route("/result", methods=["POST"])
 @user_login_required
 def result():
@@ -588,7 +602,6 @@ def result():
     )
 
 
-# ---------- User → Doctor Query ----------
 @app.route("/user/query", methods=["GET", "POST"])
 @user_login_required
 def user_query():
@@ -621,7 +634,6 @@ def user_query():
     return render_template("user/ask_doctor.html")
 
 
-# ---------- View Doctor Solutions ----------
 @app.route("/user/solutions")
 @user_login_required
 def user_solutions():
@@ -642,7 +654,6 @@ def user_solutions():
     return render_template("user/view_solution.html", queries=queries)
 
 
-# ---------- AI Chatbot ----------
 @app.route("/user/chatbot", methods=["GET"])
 @user_login_required
 def chatbot_page():
@@ -663,7 +674,7 @@ def chatbot_ask():
 
 
 # ------------------------------
-# 8. Doctor Dashboard & Features
+# Doctor Dashboard & Features
 # ------------------------------
 @app.route("/doctor/dashboard")
 @doctor_login_required
@@ -685,7 +696,6 @@ def doctor_dashboard():
     return render_template("doctor/doctor_dashboard.html", queries=queries)
 
 
-# ---------- Doctor Answer a Query ----------
 @app.route("/doctor/reply/<int:query_id>", methods=["GET", "POST"])
 @doctor_login_required
 def doctor_reply(query_id):
@@ -712,7 +722,6 @@ def doctor_reply(query_id):
         flash("Answer submitted successfully.", "success")
         return redirect(url_for("doctor_dashboard"))
 
-    # GET - show question details
     cur.execute(
         """
         SELECT q.id, q.question, q.answer, q.status, q.created_at,
@@ -737,5 +746,4 @@ def doctor_reply(query_id):
 # Run App
 # ------------------------------
 if __name__ == "__main__":
-    # debug=True only for development
-    app.run(debug=True)
+    app.run(debug=False)  # ✅ FIX 5: debug=False for production
